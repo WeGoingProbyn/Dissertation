@@ -1,10 +1,10 @@
-#ifdef _DEBUG
-#undef _DEBUG
-#include <python.h>
-#define _DEBUG
-#else
-#include <python.h>
-#endif
+//#ifdef _DEBUG
+//#undef _DEBUG
+//#include <python.h>
+//#define _DEBUG
+//#else
+//#include <python.h>
+//#endif
 
 #include "Incompressible.h"
 
@@ -42,49 +42,91 @@ void Incompressible::TrueMomentumStep() {
 }
 
 void Incompressible::SystemDriver() {
-    Py_Initialize();
+    AllocateSystemMatrixMemoryToCPU();
+    AllocateInterimMatrixMemoryToCPU();
+    AllocateSparseIndexMemoryToCPU();
+    AllocateColumnIndexMemoryToCPU();
+    AllocateCompressedRowMemoryToCPU();
+    AllocateLinearSolutionMemoryToCPU();
+    //Py_Initialize();
+
     std::chrono::duration<double> LOOPTIME, EXECUTETIME, ETA;
     auto init = std::chrono::high_resolution_clock::now();
     for (GetCURRENTSTEP(); GetCURRENTSTEP() < GetSIMSTEPS(); IncreaseSTEP()) {
         auto loopTimer = std::chrono::high_resolution_clock::now();
-        ETA = (LOOPTIME * (((double)GetSIMSTEPS() - 1.000) - (double)GetCURRENTSTEP()));
-        auto MINUTES = std::chrono::duration_cast<std::chrono::minutes>(ETA);
-        auto HOURS = std::chrono::duration_cast<std::chrono::hours>(MINUTES);
-        ETA -= MINUTES;
-        MINUTES -= HOURS;
+
         if (GetCURRENTSTEP() > 0) {
             if (CheckConvergedExit()) { break; }
             else if (CheckDivergedExit()) { break; }
             else { std::cout << "\033[A\33[2K\r"; }
         }
         else { SetKineticEnergy(); }
+
+        ETA = (LOOPTIME * (((double)GetSIMSTEPS() - 1.000) - (double)GetCURRENTSTEP()));
+        auto MINUTES = std::chrono::duration_cast<std::chrono::minutes>(ETA);
+        auto HOURS = std::chrono::duration_cast<std::chrono::hours>(MINUTES);
+        ETA -= MINUTES;
+        MINUTES -= HOURS;
+
         std::cout << GetCURRENTSTEP() << " / " << GetSIMSTEPS() - 1 << " | Estimated time remaining: ";
         std::cout << HOURS.count() << " Hours ";
         std::cout << MINUTES.count() << " Minutes ";
         std::cout << ETA.count() << " Seconds |" << std::endl;
 
         InterimMomentumStep();
+
         BuildLinearSystem();
-        ThrowCoefficients();
-        ThrowSystemVariables();
+        //ThrowCoefficients();
+        //ThrowSystemVariables();
 
-        FILE* fd = _Py_fopen("../x64/Debug/SparseSolver.py", "rb");
-        PyRun_SimpleFileEx(fd, "SparseSolver.py", 1);
+        BuildSparseMatrixForSolution();
+        //if (GetCURRENTSTEP() == 0) { break; }
+        FindSparseLinearSolution();
+        UpdatePressureValues();
 
-        //if (GetCURRENTSTEP() == 1) { break; }
-        CatchSolution();
+        //ThrowSystemVariables();
+        
+        //FILE* fd = _Py_fopen("../x64/Debug/SparseSolver.py", "rb");
+        //PyRun_SimpleFileEx(fd, "SparseSolver.py", 1);
+
+        //CatchSolution();
         TrueMomentumStep();
-        ThrowSystemVariables();
+        //ThrowSystemVariables();
+
+        //for (int i = 0; i < 4; i++) {
+        //    for (int j = 0; j < 4; j++) {
+        //        int index = (j * GetSPLITS().y) + i;
+        //        std::cout << GetMatrixValue(i, j).u << " , ";
+        //    }
+        //    std::cout << std::endl;
+        //}
+        //if (GetCURRENTSTEP() == 0) { break; }
+
         if (GetCURRENTSTEP() % 25 == 0) {
             auto loopEnd = std::chrono::high_resolution_clock::now();
             LOOPTIME = loopEnd - loopTimer;
+        } 
+        if (GetCURRENTSTEP() % 100 == 0) {
+            ThrowSystemVariables();
         }
+
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    EXECUTETIME = end - init;
-    Py_Finalize();
     if (!CheckConvergedExit()) { LoopBreakOutput(); }
     else if (!CheckDivergedExit()) { LoopBreakOutput(); }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    EXECUTETIME = end - init;
+
     std::cout << "System Elapsed Time: " << GetCURRENTSTEP() * GetDT() << " Seconds" << std::endl;
     std::cout << "Loop Execution Time: " << EXECUTETIME.count() << " Seconds" << std::endl;
+
+    ThrowSystemVariables();
+    //Py_Finalize();
+
+    DeAllocateSystemMatrixMemoryOnCPU();
+    DeAllocateInterimMatrixMemoryOnCPU();
+    DeAllocateSparseIndexMemoryToCPU();
+    DeAllocateColumnIndexMemoryToCPU();
+    DeAllocateCompressedRowMemoryToCPU();
+    DeAllocateLinearSolutionMemoryToCPU();
 }

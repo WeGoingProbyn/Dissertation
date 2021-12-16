@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Dissertation\Dependencies\Python\include;$(SolutionDir)\Dissertation\Dependencies\CUDA\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\Python\include;C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\CUDA\include;C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\UMFPACK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>MaxSpeed</Optimization>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -126,14 +126,15 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\Dissertation\Dependencies\Python\libs;$(CudaToolKitLibDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib;python3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\Dissertation\Dependencies\Python\libs;$(CudaToolKitLibDir);$(SolutionDir)\Dissertation\Dependencies\UMFPACK\lib;$(SolutionDir)\Dissertation\Dependencies\LAPACK</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;python3.lib;libumfpackd.lib;suitesparseconfigd.lib;libamdd.lib;libcamdd.lib;libccolamdd.lib;libcholmodd.lib;libcolamdd.lib;libbtfd.lib;libcxsparsed.lib;libklud.lib;libldld.lib;libspqrd.lib;SuiteSparse_GPURuntimed.lib;metisd.lib;libblas.lib;liblapack.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CudaRuntime>Static</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <GenerateLineInfo>false</GenerateLineInfo>
+      <FastMath>true</FastMath>
     </CudaCompile>
     <CudaLink>
       <AdditionalLibraryDirectories>$(SolutionDir)\Dissertation\Dependencies\CUDA\bin\crt</AdditionalLibraryDirectories>

@@ -78,23 +78,23 @@ double Physics::ComputeDiffusion(int i, int j, const char* dim) {
 
         if (j == GetSPLITS().y - 1) {
             double XDYn = -GetNU() * (GetVelocityBoundary().E - GetMatrixValue(i, j).u) / (GetD().y / 2) -
-                GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
             double XDYs = -GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y -
-                GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
             return (XDXe - XDXw) / GetD().x + (XDYn - XDYs) / GetD().y;
         }
         if (j == 0) {
             double XDYn = -GetNU() * (GetMatrixValue(i, j + 1).u - GetMatrixValue(i, j).u) / GetD().y -
-                GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
             double XDYs = -GetNU() * (GetMatrixValue(i, j).u - GetVelocityBoundary().W) / (GetD().y / 2) -
-                GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
             return (XDXe - XDXw) / GetD().x + (XDYn - XDYs) / GetD().y;
         }
         else {
             double XDYn = -GetNU() * (GetMatrixValue(i, j + 1).u - GetMatrixValue(i, j).u) / GetD().y -
-                GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j + 1).v - GetMatrixValue(i - 1, j + 1).v) / GetD().x;
             double XDYs = -GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y -
-                GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
+                           GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x;
             return (XDXe - XDXw) / GetD().x + (XDYn - XDYs) / GetD().y;
         }
     }
@@ -104,23 +104,23 @@ double Physics::ComputeDiffusion(int i, int j, const char* dim) {
 
         if (i == GetSPLITS().x - 1) {
             double YDXe = -GetNU() * (GetVelocityBoundary().S - GetMatrixValue(i, j).v) / (GetD().x / 2) -
-                GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
             double YDXw = -GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x -
-                GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
             return (YDYn - YDYs) / GetD().y + (YDXe - YDXw) / GetD().x;
         }
         if (i == 0) {
             double YDXe = -GetNU() * (GetMatrixValue(i + 1, j).v - GetMatrixValue(i, j).v) / GetD().x -
-                GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
             double YDXw = -GetNU() * (GetMatrixValue(i, j).v - GetVelocityBoundary().N) / (GetD().x / 2) -
-                GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
             return (YDYn - YDYs) / GetD().y + (YDXe - YDXw) / GetD().x;
         }
         else {
             double YDXe = -GetNU() * (GetMatrixValue(i + 1, j).v - GetMatrixValue(i, j).v) / GetD().x -
-                GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i + 1, j).u - GetMatrixValue(i + 1, j - 1).u) / GetD().y;
             double YDXw = -GetNU() * (GetMatrixValue(i, j).v - GetMatrixValue(i - 1, j).v) / GetD().x -
-                GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
+                           GetNU() * (GetMatrixValue(i, j).u - GetMatrixValue(i, j - 1).u) / GetD().y;
             return (YDYn - YDYs) / GetD().y + (YDXe - YDXw) / GetD().x;
         }
     }
@@ -136,19 +136,14 @@ void Physics::ComputeMomentum(int i, int j, const char* dim) {
     else if (dim == "y") { dim = "v"; SetInterimValue(i, j, var, dim); }
 }
 
-void Physics::BuildCoeffMat() {
-    LinearSystemMatrix = std::vector<std::vector<dim6>>((int)GetSPLITS().x, std::vector<dim6>((int)GetSPLITS().y));
-    LinearSystemRESHAPED = std::vector<dim6>((int)GetSPLITS().x * (int)GetSPLITS().y);
-}
-
 void Physics::SetBaseAValues() {
-    int POINTS = (int)GetSPLITS().x * (int)GetSPLITS().y;
+    double var = -GetDT() * (GetD().y / GetD().x);
     for (int i = 0; i < GetSPLITS().x; i++) {
         for (int j = 0; j < GetSPLITS().y; j++) {
-            LinearSystemMatrix[i][j].Aipos = -GetDT() * (GetD().y / GetD().x);
-            LinearSystemMatrix[i][j].Aisub = -GetDT() * (GetD().y / GetD().x);
-            LinearSystemMatrix[i][j].Ajpos = -GetDT() * (GetD().x / GetD().y);
-            LinearSystemMatrix[i][j].Ajsub = -GetDT() * (GetD().x / GetD().y);
+            SetLinearValue(i, j, var, "aip");
+            SetLinearValue(i, j, var, "ais");
+            SetLinearValue(i, j, var, "ajp");
+            SetLinearValue(i, j, var, "ajs");
         }
     }
 }
@@ -156,124 +151,139 @@ void Physics::SetBaseAValues() {
 void Physics::BuildTopLeft() {
     int j = 0;
     int i = 0;
-    LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                     GetD().y * GetMatrixValue(i, j).u -
-                                     GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                     GetD().x * GetMatrixValue(i, j).v;
-    LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
-    LinearSystemMatrix[i][j].Aisub = 0;
-    LinearSystemMatrix[i][j].Ajpos = 0;
+    double var;
+    var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+           GetD().y * GetMatrixValue(i, j).u -
+           GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+           GetD().x * GetMatrixValue(i, j).v;
+    SetLinearValue(i, j, var, "b");
+    var = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
+    SetLinearValue(i, j, var, "a");
+    SetLinearValue(i, j, 0.0, "ais"); // No slip
+    SetLinearValue(i, j, 0.0, "ajp"); // No slip
 }
 
 void Physics::BuildTopRight() { // Bottom Left
     int j = (int)GetSPLITS().y - 1;
     int i = 0;
-    LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                     GetD().y * GetMatrixValue(i, j).u -
-                                     GetD().x * GetMatrixValue(i, j + 1).v +
-                                     GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
-    LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + GetDT() * (GetD().x / GetD().y);
-    LinearSystemMatrix[i][j].Ajsub = 0;
-    LinearSystemMatrix[i][j].Aisub = 0;
+    double var;
+    var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+           GetD().y * GetMatrixValue(i, j).u -
+           GetD().x * GetMatrixValue(i, j + 1).v +
+           GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+    SetLinearValue(i, j, var, "b");
+    var = (GetDT() * (GetD().y / GetD().x)) + GetDT() * (GetD().x / GetD().y);
+    SetLinearValue(i, j, var, "a");
+    SetLinearValue(i, j, 0.0, "ajs");
+    SetLinearValue(i, j, 0.0, "ais");
 }
 
 void Physics::BuildBottomLeft() { // Top Right
     int j = 0;
     int i = (int)GetSPLITS().x - 1;
-    LinearSystemMatrix[i][j].Bvec = -GetD().y * GetMatrixValue(i + 1, j).u +
-                                     GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                     GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                     GetD().x * GetMatrixValue(i, j).v;
-    LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
-    LinearSystemMatrix[i][j].Aipos = 0;
-    LinearSystemMatrix[i][j].Ajpos = 0;
+    double var;
+    var = -GetD().y * GetMatrixValue(i + 1, j).u +
+           GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+           GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+           GetD().x * GetMatrixValue(i, j).v;
+    SetLinearValue(i, j, var, "b");
+    var = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
+    SetLinearValue(i, j, var, "a");
+    SetLinearValue(i, j, 0.0, "aip");
+    SetLinearValue(i, j, 0.0, "ajp");
 }
 
 void Physics::BuildBottomRight() {
     int j = (int)GetSPLITS().y - 1;
     int i = (int)GetSPLITS().x - 1;
-    LinearSystemMatrix[i][j].Bvec = -GetD().y * GetMatrixValue(i + 1, j).u +
-                                     GetD().y * (GetMatrixValue(j, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                     GetD().x * GetMatrixValue(i, j + 1).v +
-                                     GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
-    LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
-    LinearSystemMatrix[i][j].Ajsub = 0;
-    LinearSystemMatrix[i][j].Aipos = 0;
+    double var;
+    var = -GetD().y * GetMatrixValue(i + 1, j).u +
+           GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+           GetD().x * GetMatrixValue(i, j + 1).v +
+           GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+    SetLinearValue(i, j, var, "b");
+    var = (GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
+    SetLinearValue(i, j, var, "a");
+    SetLinearValue(i, j, 0.0, "ajs");
+    SetLinearValue(i, j, 0.0, "aip");
 }
 
 void Physics::BuildLeftSide() { // Top side
     int j = 0;
+    double var;
     for (int i = 1; i < GetSPLITS().y - 1; i++) {
-        LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                         GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                         GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                         GetD().x * GetMatrixValue(i, j).v; 
-        LinearSystemMatrix[i][j].Acen = (2 * GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
-        LinearSystemMatrix[i][j].Ajpos = 0;
+        var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+               GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+               GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+               GetD().x * GetMatrixValue(i, j).v;
+        SetLinearValue(i, j, var, "b");
+        var = (2 * GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
+        SetLinearValue(i, j, var, "a");
+        SetLinearValue(i, j, 0.0, "ajp");
     }
 }
 
 void Physics::BuildRightSide() {
     int j = (int)GetSPLITS().x - 1;
+    double var;
     for (int i = 1; i < GetSPLITS().y - 1; i++) {
-        LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                         GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                         GetD().x * GetMatrixValue(i, j + 1).v +
-                                         GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y); 
-        LinearSystemMatrix[i][j].Acen = (2 * GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
-        LinearSystemMatrix[i][j].Ajsub = 0;
+        var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+               GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+               GetD().x * GetMatrixValue(i, j + 1).v +
+               GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+        SetLinearValue(i, j, var, "b");
+        var = (2 * GetDT() * (GetD().y / GetD().x)) + (GetDT() * (GetD().x / GetD().y));
+        SetLinearValue(i, j, var, "a");
+        SetLinearValue(i, j, 0.0, "ajs");
     }
 }
 
 void Physics::BuildTopSide() {
     int i = 0;
+    double var;
     for (int j = 1; j < GetSPLITS().x - 1; j++) {
-        LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                         GetD().y * GetMatrixValue(i, j).u -
-                                         GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                         GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
-        LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
-        LinearSystemMatrix[i][j].Aisub = 0;
+        var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+               GetD().y * GetMatrixValue(i, j).u -
+               GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+               GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+        SetLinearValue(i, j, var, "b");
+        var = (GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
+        SetLinearValue(i, j, var, "a");
+        SetLinearValue(i, j, 0.0, "ais");
     }
 }
 
 void Physics::BuildBottomSide() {
     int i = (int)GetSPLITS().x - 1;
+    double var;
     for (int j = 1; j < GetSPLITS().y - 1; j++) {
-        LinearSystemMatrix[i][j].Bvec = -GetD().y * GetMatrixValue(i + 1, j).u +
-                                         GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                         GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                         GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
-        LinearSystemMatrix[i][j].Acen = (GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
-        LinearSystemMatrix[i][j].Aipos = 0;
+        var = -GetD().y * GetMatrixValue(i + 1, j).u +
+               GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+               GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+               GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+        SetLinearValue(i, j, var, "b");
+        var = (GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
+        SetLinearValue(i, j, var, "a");
+        SetLinearValue(i, j, 0.0, "aip");
     }
 }
 
 void Physics::BuildInterior() {
+    double var;
     for (int j = 1; j < GetSPLITS().x - 1; j++) {
         for (int i = 1; i < GetSPLITS().y - 1; i++) {
-            LinearSystemMatrix[i][j].Bvec = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
-                                             GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
-                                             GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
-                                             GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
-            LinearSystemMatrix[i][j].Acen = (2 * GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
+            var = -GetD().y * (GetMatrixValue(i + 1, j).u + GetDT() * GetInterimValue(i + 1, j).x) +
+                   GetD().y * (GetMatrixValue(i, j).u + GetDT() * GetInterimValue(i, j).x) -
+                   GetD().x * (GetMatrixValue(i, j + 1).v + GetDT() * GetInterimValue(i, j + 1).y) +
+                   GetD().x * (GetMatrixValue(i, j).v + GetDT() * GetInterimValue(i, j).y);
+            SetLinearValue(i, j, var, "b");
+            var = (2 * GetDT() * (GetD().y / GetD().x)) + (2 * GetDT() * (GetD().x / GetD().y));
+            SetLinearValue(i, j, var, "a");
         }
-    }
-}
-
-void Physics::ReshapeCoefficients() {
-    int POINTS = (int)GetSPLITS().x * (int)GetSPLITS().y;
-    for (int j = 0; j < GetSPLITS().x; j++) {
-        for (int i = 0; i < GetSPLITS().y; i++) {
-            //std::cout << LinearSystemMatrix[i][j].Bvec << " , ";
-            LinearSystemRESHAPED[(j * (int)GetSPLITS().x) + i] = LinearSystemMatrix[i][j];
-        }
-        //std::cout << std::endl;
     }
 }
 
 void Physics::BuildLinearSystem() {
-    BuildCoeffMat();
     SetBaseAValues();
     BuildTopLeft();
     BuildTopRight();
@@ -284,13 +294,6 @@ void Physics::BuildLinearSystem() {
     BuildTopSide();
     BuildBottomSide();
     BuildInterior();
-    ReshapeCoefficients();
-
-    //Acoe = nc::diag<double>(Ajsub, -XSPLIT) + // <-- DON'T DELETE THIS IS IMPORTANT
-    //    nc::diag<double>(Aisub, -1) +
-    //    nc::diag<double>(Acen, 0) +
-    //    nc::diag<double>(Aipos, 1) +
-     //   nc::diag<double>(Ajpos, XSPLIT);
     return;
 }
 
@@ -307,28 +310,26 @@ void Physics::ComputeIteration(int i, int j, const char* dim) {
     }
 }
 
-void Physics::ThrowCoefficients() {
+/*void Physics::ThrowCoefficients() {
     std::ofstream CoeFile;
     CoeFile.open("./Output/Coefficients.txt");
     CoeFile << "| B | AC | AIP | AIN | AJP | AJN |" << std::endl;
-    int it = 0;
     for (int i = 0; i < GetSPLITS().x * GetSPLITS().y; i++) {
-        if (it < ((GetSPLITS().x * GetSPLITS().y) - GetSPLITS().x)) {
-            CoeFile << LinearSystemRESHAPED[i].Bvec << " , " << LinearSystemRESHAPED[i].Acen << " , "
-                << LinearSystemRESHAPED[i].Aipos << " , " << LinearSystemRESHAPED[i + 1].Aisub << " , "
-                << LinearSystemRESHAPED[i + (int)GetSPLITS().x].Ajpos << " , " << LinearSystemRESHAPED[i].Ajsub << std::endl;
+        if (i < ((GetSPLITS().x * GetSPLITS().y) - GetSPLITS().x)) {
+            CoeFile << GetLinearValue(i).Bvec << " , " << GetLinearValue(i).Acen << " , "
+                    << GetLinearValue(i).Aipos << " , " << GetLinearValue(i + 1).Aisub << " , "
+                    << GetLinearValue(i + (int)GetSPLITS().x).Ajpos << " , " << GetLinearValue(i).Ajsub << std::endl;
         }
         else {
-            if (it < ((GetSPLITS().x * GetSPLITS().y) - 1)) {
-                CoeFile << LinearSystemRESHAPED[i].Bvec << " , " << LinearSystemRESHAPED[i].Acen << " , "
-                    << LinearSystemRESHAPED[i].Aipos << " , " << LinearSystemRESHAPED[i + 1].Aisub << std::endl;
+            if (i < ((GetSPLITS().x * GetSPLITS().y) - 1)) {
+                CoeFile << GetLinearValue(i).Bvec << " , " << GetLinearValue(i).Acen << " , "
+                    << GetLinearValue(i).Aipos << " , " << GetLinearValue(i + 1).Aisub << std::endl;
             }
             else {
-                CoeFile << LinearSystemRESHAPED[i].Bvec << " , " << LinearSystemRESHAPED[i].Acen << std::endl;
+                CoeFile << GetLinearValue(i).Bvec << " , " << GetLinearValue(i).Acen << std::endl;
             }
         }
-        it++;
     }
     CoeFile.close();
     return;
-}
+}*/

@@ -19,6 +19,30 @@ Container::Container() {
     VelocityBound = vec4();
 }
 
+__host__ void Container::AllocateSystemMatrixMemoryToCPU() { SystemMatrix = new vec3[MAXSIZE]; }
+
+__host__ void Container::AllocateInterimMatrixMemoryToCPU() { InterimMatrix = new vec2[MAXSIZE]; }
+
+__host__ void Container::AllocateSparseIndexMemoryToCPU() { SparseIndexesI = new int[NUMNONZEROS]; SparseIndexesJ = new int[NUMNONZEROS]; }
+
+__host__ void Container::AllocateColumnIndexMemoryToCPU() { ColumnIndex = new int[NUMNONZEROS]; }
+
+__host__ void Container::AllocateCompressedRowMemoryToCPU() { RowPointer = new int[MAXSIZE + 1]; }
+
+__host__ void Container::AllocateLinearSolutionMemoryToCPU() { RHSVector = new double[MAXSIZE]; nzCoeffMatrix = new double[NUMNONZEROS]; PSolution = new double[MAXSIZE]; }
+
+__host__ void Container::DeAllocateSystemMatrixMemoryOnCPU() { delete[] SystemMatrix; }
+
+__host__ void Container::DeAllocateInterimMatrixMemoryOnCPU() { delete[] InterimMatrix; }
+
+__host__ void Container::DeAllocateSparseIndexMemoryToCPU() { delete[] SparseIndexesI; delete[] SparseIndexesJ; }
+
+__host__ void Container::DeAllocateColumnIndexMemoryToCPU() { delete[] ColumnIndex; }
+
+__host__ void Container::DeAllocateCompressedRowMemoryToCPU() { delete[] RowPointer; }
+
+__host__ void Container::DeAllocateLinearSolutionMemoryToCPU() { delete[] RHSVector; delete[] nzCoeffMatrix; delete[] PSolution; }
+
 __host__ int Container::SetRE(double re) {
     RE = re;
     return 1;
@@ -46,13 +70,15 @@ __host__ int Container::SetMAXTIME(double TIME) { MAXTIME = TIME; return 1; }
 __host__ void Container::SetAverageVelocities() {
     AverageVelocities = vec2();
     for (int j = 0; j < SPLIT.y; j++) {
-        for (int i = 0; i < SPLIT.x; i++) {   
-            AverageVelocities.x += SystemMatrix[i][j].u;
+        for (int i = 0; i < SPLIT.x; i++) {
+            int index = (j * (int)SPLIT.y) + i;
+            AverageVelocities.x += SystemMatrix[index].u;
         }
     }
     for (int j = 0; j < SPLIT.y; j++) {
         for (int i = 0; i < SPLIT.x + 1; i++) {
-            AverageVelocities.y += SystemMatrix[i][j].v;
+            int index = (j * (int)SPLIT.y) + i;
+            AverageVelocities.y += SystemMatrix[index].v;
         }
     }
 }
@@ -84,24 +110,34 @@ __host__ int Container::SetSystemVariables() {
     SIMSTEPS = TRUETIME / DT;
     DT = TRUETIME / (int)SIMSTEPS;
 
-    SystemMatrix = std::vector<std::vector<vec3>>((int)SPLIT.x + 1, std::vector<vec3>((int)SPLIT.y + 1));
-    InterimMatrix = std::vector<std::vector<vec2>>((int)SPLIT.x + 1, std::vector<vec2>((int)SPLIT.y + 1));
+    SYSTEMSIZE = (int)SPLIT.x + 1 * (int)SPLIT.y + 1;
+
+    vars[0] = SPLIT.x;
+    vars[1] = SPLIT.y;
+    vars[2] = D.x;
+    vars[3] = D.y;
+    vars[4] = DT;
+    vars[5] = NU;
+    vars[6] = VelocityBound.E;
+    vars[7] = VelocityBound.W;
+    vars[8] = VelocityBound.N;
+    vars[9] = VelocityBound.S;
     return 1;
-} // BROKE
+}
 
 __host__ int Container::IncreaseSTEP() { STEPNUMBER++; return 1; }
 
 __host__ double Container::GetCFL() { return CFL; }
 
-__host__ __device__ double Container::GetRE() { return RE; }
+__host__  double Container::GetRE() { return RE; }
 
-__host__ __device__ vec4 Container::GetVelocityBoundary() { return VelocityBound; }
+__host__  vec4 Container::GetVelocityBoundary() { return VelocityBound; }
 
-__host__ __device__ vec2 Container::GetSPLITS() { return SPLIT; }
+__host__  vec2 Container::GetSPLITS() { return SPLIT; }
 
-__host__ __device__ vec2 Container::GetSIZE() { return SIZE; }
+__host__  vec2 Container::GetSIZE() { return SIZE; }
 
-__host__ __device__ vec2 Container::GetD() { return D; }
+__host__  vec2 Container::GetD() { return D; }
 
 __host__ double Container::GetMAXTIME() { return MAXTIME; }
 
@@ -111,21 +147,114 @@ __host__ int Container::GetCURRENTSTEP() { return STEPNUMBER; }
 
 __host__ double Container::GetTOLERANCE() { return TOLERANCE; }
 
-__host__ __device__ double Container::GetDT() { return DT; }
+__host__  double Container::GetDT() { return DT; }
 
-__host__ __device__ double Container::GetNU() { return NU; }
+__host__  double Container::GetNU() { return NU; }
 
 __host__ int Container::SetMatrixValue(int i, int j, double var, const char* dim) {
-    if (dim == "u") { SystemMatrix[i][j].u = var; return 1; }
-    else if (dim == "v") { SystemMatrix[i][j].v = var; return 1; }
-    else if (dim == "p") { SystemMatrix[i][j].p = var; return 1; }
+    int index = (j * (int)SPLIT.y) + i;
+    if (dim == "u") { SystemMatrix[index].u = var; return 1; }
+    else if (dim == "v") { SystemMatrix[index].v = var; return 1; }
+    else if (dim == "p") { SystemMatrix[index].p = var; return 1; }
     else { return -1; }
 }
 
 __host__ int Container::SetInterimValue(int i, int j, double var, const char* dim) {
-    if (dim == "u") { InterimMatrix[i][j].x = var; return 1; }
-    else if (dim == "v") { InterimMatrix[i][j].y = var; return 1; }
+    int index = (j * (int)SPLIT.y) + i;
+    if (dim == "u") { InterimMatrix[index].x = var; return 1; }
+    else if (dim == "v") { InterimMatrix[index].y = var; return 1; }
     else { return -1; }
+}
+
+__host__ int Container::SetLinearValue(int i, int j, double var, const char* dim) {
+    int TRUEindex = (j * (int)SPLIT.y) + i;
+    if (dim == "b") { RHSVector[TRUEindex] = var; return 1; } // Place into AMatrix and BVector not linearsystem
+    else if (dim == "a") {
+        SparseIndexesI[TRUEindex] = TRUEindex;
+        SparseIndexesJ[TRUEindex] = TRUEindex;
+        nzCoeffMatrix[TRUEindex] = var;
+        //nnz++;
+        return 1;
+    }
+    else if (dim == "aip") {
+        int index = (j * SPLIT.y) + i + (SPLIT.y * SPLIT.x);
+        SparseIndexesI[index] = TRUEindex + 1;
+        SparseIndexesJ[index] = TRUEindex;
+        nzCoeffMatrix[index] = var;
+        //nnz++;
+        return 1;
+    }
+    else if (dim == "ais") { 
+        int index = (j * SPLIT.y) + i + (2 * (SPLIT.y * SPLIT.x));
+        SparseIndexesI[index] = TRUEindex - 1;
+        SparseIndexesJ[index] = TRUEindex;
+        nzCoeffMatrix[index] = var;
+        //nnz++;
+        return 1; 
+    }
+    else if (dim == "ajp") {
+        int index = (j * SPLIT.y) + i + (3 * (SPLIT.y * SPLIT.x));
+        SparseIndexesI[index] = TRUEindex;
+        SparseIndexesJ[index] = TRUEindex - SPLIT.x;
+        nzCoeffMatrix[index] = var;
+        //nnz++;
+        return 1; 
+    }
+    else if (dim == "ajs") { 
+        int index = (j * SPLIT.y) + i + (4 * (SPLIT.y * SPLIT.x));
+        SparseIndexesI[index] = TRUEindex;
+        SparseIndexesJ[index] = TRUEindex + SPLIT.y;
+        nzCoeffMatrix[index] = var;
+        //nnz++;
+        return 1; 
+    }
+    else { return -1; }
+}
+
+__host__ void Container::BuildSparseMatrixForSolution() {
+    nnz = 5 * GetSPLITS().x * GetSPLITS().y;
+    //for (int i = 0; i < nnz; i++) {
+    //    std::cout << "I = " << SparseIndexesI[i] << " , J = " << SparseIndexesJ[i] << " , Value = " << nzCoeffMatrix[i] << std::endl;
+    //}
+    for (int i = 0; i < nnz; i++) { 
+        if (nzCoeffMatrix[i] == 0) {
+            for (int j = i; j < nnz; j++) {
+                SparseIndexesI[j] = SparseIndexesI[j + 1];
+                SparseIndexesJ[j] = SparseIndexesJ[j + 1];
+                nzCoeffMatrix[j] = nzCoeffMatrix[j + 1];
+            }
+            nnz--;
+            i--;
+        }
+    }
+}
+
+__host__ void Container::FindSparseLinearSolution() {
+    umfpack_di_defaults(Control);
+    Control[UMFPACK_PRL] = 6;
+    //umfpack_di_report_triplet(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, Control);
+    umfpack_di_triplet_to_col(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, RowPointer, ColumnIndex, nzCoeffMatrix, NULL);
+    //umfpack_di_report_matrix(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, 0, Control);
+    //umfpack_di_report_vector(SPLIT.x * SPLIT.x, RHSVector, Control);
+    umfpack_di_symbolic(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, &Symbolic, null, null);
+    //umfpack_di_report_symbolic(Symbolic, Control);
+    umfpack_di_numeric(RowPointer, ColumnIndex, nzCoeffMatrix, Symbolic, &Numeric, null, null);
+    //umfpack_di_report_numeric(Numeric, Control);
+    umfpack_di_solve(UMFPACK_A, RowPointer, ColumnIndex, nzCoeffMatrix, PSolution, RHSVector, Numeric, null, null);
+    //double Info[UMFPACK_INFO];
+    //umfpack_di_report_info(Control, Info);
+    //umfpack_di_free_symbolic(&Symbolic);
+    //umfpack_di_free_numeric(&Numeric);
+    //double Info[UMFPACK_INFO];
+}
+
+__host__ void Container::UpdatePressureValues() {
+    for (int i = 0; i < SPLIT.x; i++) {
+        for (int j = 0; j < SPLIT.y; j++) {
+            int index = (j * (int)SPLIT.y) + i;
+            SetMatrixValue(i, j, PSolution[index], "p");
+        }
+    }
 }
 
 __host__ void Container::SetKineticEnergy() {
@@ -133,18 +262,38 @@ __host__ void Container::SetKineticEnergy() {
     KineticEnergy.x = std::sqrt(std::pow(AverageVelocities.x, 2) + std::pow(AverageVelocities.y, 2));
 }
 
-__host__ vec3 Container::GetMatrixValue(int i, int j) { return SystemMatrix[i][j]; }
+__host__ vec3 Container::GetMatrixValue(int i, int j) { 
+    int index = (j * (int)SPLIT.y) + i;
+    return SystemMatrix[index];
+}
 
-__host__ vec2 Container::GetInterimValue(int i, int j) { return InterimMatrix[i][j]; }
+__host__ vec2 Container::GetInterimValue(int i, int j) { 
+    int index = (j * (int)SPLIT.y) + i;
+    return InterimMatrix[index];
+}
 
 __host__ vec2 Container::GetKineticEnergy() { return KineticEnergy; }
 
-__host__ std::vector<std::vector<vec3>> Container::GetSystemMatrix() { return SystemMatrix; }
+__host__ double* Container::GetVariableList() { return vars; }
 
-__host__ std::vector<std::vector<vec2>> Container::GetInterimMatrix() { return InterimMatrix; }
+__host__ vec3* Container::GetSystemMatrix() { return SystemMatrix; }
+
+__host__ vec2* Container::GetInterimMatrix() { return InterimMatrix; }
+
+__host__ int* Container::GetSparseIndexI() { return SparseIndexesI; }
+
+__host__ int* Container::GetSparseIndexJ() { return SparseIndexesJ; }
+
+__host__ int* Container::GetCompressedRowVector() { return RowPointer; }
+
+__host__ int* Container::GetColumnIndexVector() { return ColumnIndex; }
+
+__host__ double* Container::GetRHSVector() { return RHSVector; }
+
+__host__ double* Container::GetnzCoeffMat() { return nzCoeffMatrix; }
 
 __host__ bool Container::CheckConvergedExit() {
-    if (std::abs(GetKineticEnergy().x - GetKineticEnergy().y) < GetTOLERANCE()) { return true; } // Can maybe use this to format console output
+    if (std::abs(GetKineticEnergy().x - GetKineticEnergy().y) < GetTOLERANCE()) { return true; }
     else { return false; }
 }
 
@@ -193,26 +342,30 @@ __host__ int Container::ThrowSystemVariables() {
     SystemFile << "| X | Y | U | V | P |" << std::endl;
     for (int j = 0; j < SPLIT.y + 1; j++) {
         for (int i = 0; i < SPLIT.x + 1; i++) {
-            //std::cout << InterimMatrix[i][j].x << " , ";
-            SystemFile << (D.x * i) << " , " << (D.y* j) << " , ";
+            int index = (j * (int)SPLIT.y) + i;
+            SystemFile << (D.x * i) << " , " << (D.y * j) << " , ";
             if (i < SPLIT.x + 1) {
-                if (j != SPLIT.y) { SystemFile << SystemMatrix[i][j].u << " , "; }
+                if (j != SPLIT.y) { 
+                    SystemFile << SystemMatrix[index].u << " , ";
+                }
                 else { SystemFile << "-" << " , "; }
             }
             if (j < SPLIT.y + 1) {
-                if (i != SPLIT.x) { SystemFile << SystemMatrix[i][j].v << " , "; }
+                if (i != SPLIT.x) { 
+                    SystemFile << SystemMatrix[index].v << " , ";
+                }
                 else { SystemFile << "-" << " , "; }
             }
             if (i < SPLIT.x) {
-                if (j < SPLIT.y) { SystemFile << SystemMatrix[i][j].p; }
+                if (j < SPLIT.y) {
+                    SystemFile << SystemMatrix[index].p;
+                }
                 else { SystemFile << "-"; }
             }
             else { SystemFile << "-"; }
             SystemFile << std::endl;
         }
-        //std::cout << std::endl;
     }
-    //std::cout << std::endl;
     SystemFile.close();
     return 1;
 };
@@ -221,17 +374,11 @@ __host__ void Container::CatchSolution() {
     int it = 0;
     std::string line;
     std::ifstream SolFile("./Output/P_Solution.txt");
-    P_SOL = std::vector<double>((unsigned int)SPLIT.x * (unsigned int)SPLIT.y);
     if (SolFile.is_open()) {
         while (std::getline(SolFile, line)) {
             if (it == 0) { ; }
-            else { P_SOL[it - 1] = stod(line); }
+            else { SystemMatrix[it - 1].p = stod(line); }
             it++;
-        }
-        for (int i = 0; i < SPLIT.x; i++) {
-            for (int j = 0; j < SPLIT.y; j++) {
-                SystemMatrix[i][j].p = P_SOL[(unsigned int)(j * (unsigned int)SPLIT.x) + i];
-            }
         }
         SolFile.close();
     }

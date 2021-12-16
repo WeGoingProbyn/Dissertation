@@ -49,10 +49,10 @@
     <CudaCompile Include="SystemContainer.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="FVMCUDA.cu">
+    <CudaCompile Include="IncompressCUDA.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="IncompressCUDA.cu">
+    <CudaCompile Include="FVMCUDA.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
