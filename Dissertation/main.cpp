@@ -14,16 +14,27 @@
 
 int main() {
     Incompressible Fluid;
-    //IncompressCUDA Fluid;
     Fluid.SetRE(1000);
-    Fluid.SetCFL(1);
+    Fluid.SetCFL(0.5);
     Fluid.SetVelocityBoundary(vec4(1, 0, 0, 0));
-    Fluid.SetSPLITS(vec2(64, 64));
+    Fluid.SetSPLITS(vec2(32, 32));
     Fluid.SetSIZE(vec2(1, 1));
-    Fluid.SetMAXTIME((double)(60 * 0.2));
-    Fluid.SetTOLERANCE((double)1e-9);
+    Fluid.SetMAXTIME((double)(60 * 1)); // Seconds
+    Fluid.SetTOLERANCE((double)1e-16);
     Fluid.SetSystemVariables();
 
     Fluid.SystemDriver();
+
+    IncompressCUDA CUDA;
+    CUDA.SetRE(1000);
+    CUDA.SetCFL(0.5);
+    CUDA.SetVelocityBoundary(vec4(1, 0, 0, 0));
+    CUDA.SetSPLITS(vec2(32, 32));
+    CUDA.SetSIZE(vec2(1, 1));
+    CUDA.SetMAXTIME((double)(60 * 1)); // Seconds
+    CUDA.SetTOLERANCE((double)1e-16);
+    CUDA.SetSystemVariables();
+
+    CUDA.SystemDriver();
     return 0;
 }

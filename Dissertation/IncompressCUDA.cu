@@ -37,7 +37,7 @@ __global__ void InterimMomentumKernel(IncompressCUDA* CPUinstance, double* Devic
     }
 }
 
-__global__ void LinearSystemKernel(PhysicsCUDA* CPUinstance, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ) {
+__global__ void LinearSystemKernel(PhysicsCUDA* CPUinstance, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ, int* PrefixSum) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
     //if (i == 0 && j == 0) { printf("I = %i, J = %i, SPLITSx = %f \n", i, j, CPUinstance->GetSPLITS(DeviceVars).x); }
@@ -46,17 +46,24 @@ __global__ void LinearSystemKernel(PhysicsCUDA* CPUinstance, double* DeviceVars,
             CPUinstance->BuildLinearSystem(i, j, DeviceVars, DeviceMatrix, DeviceInterim, DeviceRHSVector, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ);
         }
     }
+    //__syncthreads();
     //if (i < CPUinstance->GetSPLITS(DeviceVars).x * CPUinstance->GetSPLITS(DeviceVars).x) {
     //    if (j < CPUinstance->GetSPLITS(DeviceVars).y * CPUinstance->GetSPLITS(DeviceVars).y) {
-    //        CPUinstance->BuildSparseMatrixForSolution(i, j, DeviceVars, DeviceRHSVector, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ);
+    //        CPUinstance->BuildSparseMatrixForSolution(i, j, DeviceVars, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ, PrefixSum);
     //    }
     //}
 }
 
-__global__ void TrueMomentumKernel(IncompressCUDA* CPUinstance, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim) {
+__global__ void TrueMomentumKernel(IncompressCUDA* CPUinstance, double* DeviceVars, double* DevicePSolution, vec3* DeviceMatrix, vec2* DeviceInterim) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int index = (j * CPUinstance->GetSPLITS(DeviceVars).y) + i;
     double var;
+    if (i < CPUinstance->GetSPLITS(DeviceVars).x) {
+        if (j < CPUinstance->GetSPLITS(DeviceVars).y) {
+            DeviceMatrix[index].p = DevicePSolution[index];
+        }
+    }
     if (i >= 1 && i < CPUinstance->GetSPLITS(DeviceVars).x) {
         if (j < CPUinstance->GetSPLITS(DeviceVars).y) {
             var = CPUinstance->ComputeIteration(i, j, 0, DeviceVars, DeviceMatrix, DeviceInterim);
@@ -72,18 +79,36 @@ __global__ void TrueMomentumKernel(IncompressCUDA* CPUinstance, double* DeviceVa
 }
 
 __host__ void IncompressCUDA::InterimMomentumStep() {
-    InterimMomentumKernel<<<dim3(64, 64, 4), dim3(32, 32)>>> (this, DeviceVars, DeviceMatrix, DeviceInterim);
-    return;
+    auto LoopStart = std::chrono::high_resolution_clock::now();
+    InterimMomentumKernel<<<dim3(1024, 1024), dim3(32, 32)>>> (this, DeviceVars, DeviceMatrix, DeviceInterim);
+    auto LoopEnd = std::chrono::high_resolution_clock::now();
+    if (debug) {
+        std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
+        std::cout << "InterimMomentumKernel Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+        std::cout << "InterimMomentumKernel ->";
+    }
 }
 
 __host__ void IncompressCUDA::LinearSystemBuilder () {
-    LinearSystemKernel <<<dim3(64, 64, 4), dim3(32, 32) >> > (this, DeviceVars, DeviceMatrix, DeviceInterim, DeviceRHSVector, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ);
-    return;
+    auto LoopStart = std::chrono::high_resolution_clock::now();
+    LinearSystemKernel<<<dim3(1024, 1024), dim3(32, 32)>>> (this, DeviceVars, DeviceMatrix, DeviceInterim, DeviceRHSVector, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ, PrefixSum);
+    auto LoopEnd = std::chrono::high_resolution_clock::now();
+    if (debug) {
+        std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
+        std::cout << "LinearSystemKernel Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+        std::cout << "LinearSystemKernel ->";
+    }
 }
 
 __host__ void IncompressCUDA::TrueMomentumStep() {
-    TrueMomentumKernel <<<dim3(64, 64, 4), dim3(32, 32) >> > (this, DeviceVars, DeviceMatrix, DeviceInterim);
-    //std::cout << "Kernel Opened";
+    auto LoopStart = std::chrono::high_resolution_clock::now();
+    TrueMomentumKernel << <dim3(1024, 1024), dim3(32, 32)>>> (this, DeviceVars, DevicePSolution, DeviceMatrix, DeviceInterim);
+    auto LoopEnd = std::chrono::high_resolution_clock::now();
+    if (debug) {
+        std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
+        std::cout << "TrueMomentumKernel Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+        std::cout << "TrueMomentumKernel ->";
+    }
 }
 
 __host__ void IncompressCUDA::SystemDriver() {
@@ -94,18 +119,13 @@ __host__ void IncompressCUDA::SystemDriver() {
     AllocateCompressedRowMemoryToCPU();
     AllocateLinearSolutionMemoryToCPU();
 
-    //std::cout << "AllocateVariablesMemoryToGPU ->";
     AllocateVariablesMemoryToGPU();
-    //std::cout << "AllocateMatrixMemoryToGPU ->";
     AllocateMatrixMemoryToGPU();
-    //std::cout << "AllocateInterimMemoryToGPU ->";
     AllocateInterimMemoryToGPU();
-    //std::cout << "AllocateLinearSystemMemoryToGPU ->";
     AllocateLinearSystemMemoryToGPU();
 
     //Py_Initialize();
 
-    //std::cout << "SetVariablesToGPU ->";
     SetVariablesToGPU();
 
     std::chrono::duration<double> LOOPTIME, EXECUTETIME, ETA;
@@ -116,7 +136,7 @@ __host__ void IncompressCUDA::SystemDriver() {
         if (GetCURRENTSTEP() > 0) {
             //if (CheckConvergedExit()) { break; }
             if (CheckDivergedExit()) { break; }
-            else { std::cout << "\033[A\33[2K\r"; }
+            else if (!debug) { std::cout << "\033[A\33[2K\r"; }
         }
         else { SetKineticEnergy(); }
 
@@ -126,30 +146,29 @@ __host__ void IncompressCUDA::SystemDriver() {
         ETA -= MINUTES;
         MINUTES -= HOURS;
 
-        std::cout << GetCURRENTSTEP() << " / " << GetSIMSTEPS() - 1 << " | Estimated time remaining: ";
-        std::cout << HOURS.count() << " Hours ";
-        std::cout << MINUTES.count() << " Minutes ";
-        std::cout << ETA.count() << " Seconds |" << std::endl;
+        if (!debug) {
+            std::cout << GetCURRENTSTEP() << " / " << GetSIMSTEPS() - 1 << " | Estimated time remaining: ";
+            std::cout << HOURS.count() << " Hours ";
+            std::cout << MINUTES.count() << " Minutes ";
+            std::cout << ETA.count() << " Seconds |" << std::endl;
+        }
 
-        //std::cout << "SetMatrixToGPU ->";
         SetMatrixToGPU();
-        //std::cout << "SetInterimToGPU ->";
         SetInterimToGPU();
 
-        //std::cout << "InterimMomentumStep ->";
         InterimMomentumStep();
         CudaErrorChecker(cudaDeviceSynchronize());
+        if (debug) { std::cout << "=====================" << std::endl; }
 
-        //std::cout << "SetLinearSystemToGPU ->";
         SetLinearSystemToGPU();
-        //std::cout << "LinearSystemBuilder ->";
         LinearSystemBuilder();
         CudaErrorChecker(cudaDeviceSynchronize());
-        //std::cout << "GetLinearSystemFromGPU ->";
+        if (debug) { std::cout << "=====================" << std::endl; }
         GetLinearSystemFromGPU();
 
         BuildSparseMatrixForSolution();
         FindSparseLinearSolution();
+        if (debug) { std::cout << "=====================" << std::endl; }
         UpdatePressureValues();
         
         //ThrowSystemVariables();
@@ -174,19 +193,20 @@ __host__ void IncompressCUDA::SystemDriver() {
 
         //CatchSolution();
 
-        //std::cout << "SetMatrixToGPU ->";
-        SetMatrixToGPU();
-        //std::cout << "TrueMomentumStep ->";
+        SetPSolutionToGPU();
         TrueMomentumStep();
         CudaErrorChecker(cudaDeviceSynchronize());
-        //std::cout << "GetMatrixFromGPU ->";
+        if (debug) { std::cout << "=====================" << std::endl; }
         GetMatrixFromGPU();
+        //cudaDeviceSynchronize();
+
 
         //ThrowSystemVariables();
-        //if (GetCURRENTSTEP() == 0) { break; }
-
-        auto loopEnd = std::chrono::high_resolution_clock::now();
-        LOOPTIME = loopEnd - loopTimer;
+        if (debug) { break; }
+        if (GetCURRENTSTEP() % 5 == 0) {
+            auto loopEnd = std::chrono::high_resolution_clock::now();
+            LOOPTIME = loopEnd - loopTimer;
+        }
     }
     if (!CheckConvergedExit()) { LoopBreakOutput(); }
     if (!CheckDivergedExit()) { LoopBreakOutput(); }

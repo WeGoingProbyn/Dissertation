@@ -1,17 +1,5 @@
 #include "FVMCUDA.cuh"
 
-/*__host__ void PhysicsCUDA::AllocateSparseMatrixMemoryToCPU() {
-    SparseMatrix = new double[COOFORMAT];
-    SparseColumnIndex = new int[COOFORMAT];
-    SparseRowIndex = new int[COOFORMAT];
-}
-
-__host__ void PhysicsCUDA::DeAllocateSparseMatrixMemoryToCPU() {
-    delete[] SparseMatrix;
-    delete[] SparseColumnIndex;
-    delete[] SparseRowIndex;
-}*/
-
 __host__ void PhysicsCUDA::CudaErrorChecker(cudaError_t func) {
     if (debug) {
         if (func == cudaSuccess) { std::cout << " CudaSuccess" << std::endl; }
@@ -24,56 +12,97 @@ __host__ void PhysicsCUDA::CudaErrorChecker(cudaError_t func) {
 }
 
 __host__ void PhysicsCUDA::AllocateVariablesMemoryToGPU() {
+    if(debug) { std::cout << "AllocateVariablesMemoryToGPU ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceVars, VARALLOCSIZE));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::AllocateMatrixMemoryToGPU() {
+    if (debug) { std::cout << "AllocateMatrixMemoryToGPU ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceMatrix, VEC3ALLOCSIZE));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::AllocateInterimMemoryToGPU() {
+    if (debug) { std::cout << "AllocateInterimMemoryToGPU ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceInterim, VEC2ALLOCSIZE));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::AllocateLinearSystemMemoryToGPU() {
+    if (debug) { std::cout << "AllocateLinearSystemMemoryToGPU ->\n" << "DeviceRHSVector ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceRHSVector, DOUBLEALLOCSIZE));
+    if (debug) { std::cout << "DeviceNzCoeffMat ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceNzCoeffMat, DOUBLESPARSEALLOCSIZE));
+    if (debug) { std::cout << "DevicePSolution ->"; }
+    CudaErrorChecker(cudaMalloc(&DevicePSolution, DOUBLEALLOCSIZE));
+    if (debug) { std::cout << "DeviceSparseIndexI ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceSparseIndexI, INTALLOCSIZE));
+    if (debug) { std::cout << "DeviceSparseIndexJ ->"; }
     CudaErrorChecker(cudaMalloc(&DeviceSparseIndexJ, INTALLOCSIZE));
+    if (debug) { std::cout << "PrefixSum ->"; }
+    CudaErrorChecker(cudaMalloc(&PrefixSum, INTALLOCSIZE));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::SetVariablesToGPU() {
+    if (debug) { std::cout << "SetVariablesToGPU ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceVars, GetVariableList(), VARALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::SetMatrixToGPU() {
+    if (debug) { std::cout << "SetMatrixToGPU ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceMatrix, GetSystemMatrix(), VEC3ALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::SetInterimToGPU() {
+    if (debug) { std::cout << "SetInterimToGPU ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceInterim, GetInterimMatrix(), VEC2ALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::SetLinearSystemToGPU() {
+    if (debug) { std::cout << "SetLinearSystemToGPU ->\n" << "DeviceRHSVector ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceRHSVector, GetRHSVector(), DOUBLEALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "DeviceNzCoeffMat ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceNzCoeffMat, GetnzCoeffMat(), DOUBLESPARSEALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "DeviceSparseIndexI ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceSparseIndexI, GetSparseIndexI(), INTALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "DeviceSparseIndexJ ->"; }
     CudaErrorChecker(cudaMemcpy(DeviceSparseIndexJ, GetSparseIndexJ(), INTALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "=====================" << std::endl; }
+}
+
+__host__ void PhysicsCUDA::SetPSolutionToGPU() {
+    if (debug) { std::cout << "DevicePSolution ->"; }
+    CudaErrorChecker(cudaMemcpy(DevicePSolution, GetPSolution(), DOUBLEALLOCSIZE, cudaMemcpyHostToDevice));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::GetMatrixFromGPU() {
+    if (debug) { std::cout << "GetMatrixFromGPU ->"; }
     CudaErrorChecker(cudaMemcpy(GetSystemMatrix(), DeviceMatrix, VEC3ALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::GetInterimFromGPU() {
+    if (debug) { std::cout << "GetInterimFromGPU ->"; }
     CudaErrorChecker(cudaMemcpy(GetInterimMatrix(), DeviceInterim, VEC2ALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::GetLinearSystemFromGPU() {
+    if (debug) { std::cout << "GetLinearSystemFromGPU ->\n" << "DeviceRHSVector ->"; }
     CudaErrorChecker(cudaMemcpy(GetRHSVector(), DeviceRHSVector, DOUBLEALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "DeviceNzCoeffMat ->"; }
     CudaErrorChecker(cudaMemcpy(GetnzCoeffMat(), DeviceNzCoeffMat, DOUBLESPARSEALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "DeviceSparseIndexI ->"; }
     CudaErrorChecker(cudaMemcpy(GetSparseIndexI(), DeviceSparseIndexI, INTALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "DeviceSparseIndexJ ->"; }
     CudaErrorChecker(cudaMemcpy(GetSparseIndexJ(), DeviceSparseIndexJ, INTALLOCSIZE, cudaMemcpyDeviceToHost));
+    if (debug) { std::cout << "=====================" << std::endl; }
 }
 
 __host__ void PhysicsCUDA::DeviceVariablesCleanUp() { cudaFree(DeviceVars); }
@@ -83,16 +112,13 @@ __host__ void PhysicsCUDA::DeviceMatrixCleanUp() { cudaFree(DeviceMatrix); }
 __host__ void PhysicsCUDA::DeviceInterimCleanUp() { cudaFree(DeviceInterim); }
 
 __host__ void PhysicsCUDA::DeviceLinearSystemCleanUp() { 
+    cudaFree(DeviceRHSVector); 
     cudaFree(DeviceNzCoeffMat); 
+    cudaFree(DevicePSolution); 
     cudaFree(DeviceSparseIndexI); 
     cudaFree(DeviceSparseIndexJ); 
+    cudaFree(PrefixSum);
 }
-
-/*__host__ void PhysicsCUDA::DeviceSparseMatrixCleanUp() {
-    cudaFree(DeviceSparseMatrix);
-    cudaFree(DeviceColumnIndex);
-    cudaFree(DeviceRowIndex);
-}*/
 
 __device__ vec2 PhysicsCUDA::GetSPLITS(double* DeviceVars) { return vec2(DeviceVars[0], DeviceVars[1]); }
 
@@ -451,13 +477,58 @@ __device__ void PhysicsCUDA::BuildLinearSystem(int i, int j, double* DeviceVars,
     return;
 }
 
-//__device__ void PhysicsCUDA::BuildSparseMatrixForSolution(int i, int j, double* DeviceVars, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ) {
-//    int index = (j * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y) + i;
-//    int nnz = 5 * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y;
-//    if (index < nnz) {
-//        //printf("I = %i, J = %i, Value = %f\n", DeviceSparseIndexI[index], DeviceSparseIndexJ[index], DeviceNzCoeffMat[index]);
-//    }
-//}
+__device__ void PhysicsCUDA::FindValidEntries(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* PrefixSum) {
+    int index = (j * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y) + i;
+    int nnz = 5 * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y;
+    if (index < nnz) {
+        if (!DeviceNzCoeffMat[index]) { PrefixSum[index] = 0; }
+        if (DeviceNzCoeffMat[index]) { PrefixSum[index] = 1; }
+    }
+    //if (i == 0 && j == 0) {
+    //    for (int x = 0; x < nnz; x++) {
+    //        printf("Index = %i, Value = %f, PrefixSum = %i\n", x, DeviceNzCoeffMat[x], PrefixSum[x]);
+    //    }
+    //}
+}
+
+__device__ void PhysicsCUDA::SumValidEntries(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* PrefixSum) {
+    int index = (j * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y) + i;
+    int nnz = 5 * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y;
+    if (index > 0 && index < nnz) {
+        int cdf_val = 0;
+        for (int x = 0; x < index; x++) { cdf_val += PrefixSum[x]; }
+        __syncthreads();
+        PrefixSum[index] = cdf_val;
+    }
+    //if (i == 0 && j == 0) {
+    //    for (int x = 0; x < nnz; x++) {
+    //        printf("Index = %i, Value = %f, PrefixSum = %i\n", x, DeviceNzCoeffMat[x], PrefixSum[x]);
+    //    }
+    //}
+}
+
+
+__device__ void PhysicsCUDA::ShiftDeviceLinearSystem(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ, int* PrefixSum) {
+    int index = (j * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y) + i;
+    int nnz = 5 * GetSPLITS(DeviceVars).x * GetSPLITS(DeviceVars).y;
+    if (index > 0 && index < nnz) {
+        if (DeviceNzCoeffMat[index]) {
+            DeviceNzCoeffMat[PrefixSum[index]] = DeviceNzCoeffMat[index];
+            DeviceSparseIndexI[PrefixSum[index]] = DeviceSparseIndexI[index];
+            DeviceSparseIndexJ[PrefixSum[index]] = DeviceSparseIndexJ[index];
+        }
+        else { ; }
+    }
+    else if (index == 0) { DeviceNzCoeffMat[0] = DeviceNzCoeffMat[0]; }
+}
+
+__device__ void PhysicsCUDA::BuildSparseMatrixForSolution(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ, int* PrefixSum) {
+    FindValidEntries(i, j, DeviceVars, DeviceNzCoeffMat, PrefixSum);
+    __syncthreads();
+    SumValidEntries(i, j, DeviceVars, DeviceNzCoeffMat, PrefixSum);
+    __syncthreads();
+    ShiftDeviceLinearSystem(i, j, DeviceVars, DeviceNzCoeffMat, DeviceSparseIndexI, DeviceSparseIndexJ, PrefixSum);
+}
 
 __device__ double PhysicsCUDA::ComputeIteration(int i, int j, int dim, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim) {
     if (dim == 0) {

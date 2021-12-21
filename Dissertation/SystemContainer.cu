@@ -29,7 +29,7 @@ __host__ void Container::AllocateColumnIndexMemoryToCPU() { ColumnIndex = new in
 
 __host__ void Container::AllocateCompressedRowMemoryToCPU() { RowPointer = new int[MAXSIZE + 1]; }
 
-__host__ void Container::AllocateLinearSolutionMemoryToCPU() { RHSVector = new double[MAXSIZE]; nzCoeffMatrix = new double[NUMNONZEROS]; PSolution = new double[MAXSIZE]; }
+__host__ void Container::AllocateLinearSolutionMemoryToCPU() { RHSVector = new double[MAXSIZE]; nzCoeffMatrix = new double[NUMNONZEROS]; PSolution = new double[MAXSIZE], HostPrefixSum = new int[NUMNONZEROS]; }
 
 __host__ void Container::DeAllocateSystemMatrixMemoryOnCPU() { delete[] SystemMatrix; }
 
@@ -41,7 +41,7 @@ __host__ void Container::DeAllocateColumnIndexMemoryToCPU() { delete[] ColumnInd
 
 __host__ void Container::DeAllocateCompressedRowMemoryToCPU() { delete[] RowPointer; }
 
-__host__ void Container::DeAllocateLinearSolutionMemoryToCPU() { delete[] RHSVector; delete[] nzCoeffMatrix; delete[] PSolution; }
+__host__ void Container::DeAllocateLinearSolutionMemoryToCPU() { delete[] RHSVector; delete[] nzCoeffMatrix; delete[] PSolution, delete[] HostPrefixSum; }
 
 __host__ int Container::SetRE(double re) {
     RE = re;
@@ -173,79 +173,91 @@ __host__ int Container::SetLinearValue(int i, int j, double var, const char* dim
         SparseIndexesI[TRUEindex] = TRUEindex;
         SparseIndexesJ[TRUEindex] = TRUEindex;
         nzCoeffMatrix[TRUEindex] = var;
-        //nnz++;
         return 1;
     }
     else if (dim == "aip") {
-        int index = (j * SPLIT.y) + i + (SPLIT.y * SPLIT.x);
+        int index = (j * (int)SPLIT.y) + i + ((int)SPLIT.y * (int)SPLIT.x);
         SparseIndexesI[index] = TRUEindex + 1;
         SparseIndexesJ[index] = TRUEindex;
         nzCoeffMatrix[index] = var;
-        //nnz++;
         return 1;
     }
     else if (dim == "ais") { 
-        int index = (j * SPLIT.y) + i + (2 * (SPLIT.y * SPLIT.x));
+        int index = (j * (int)SPLIT.y) + i + (2 * ((int)SPLIT.y * (int)SPLIT.x));
         SparseIndexesI[index] = TRUEindex - 1;
         SparseIndexesJ[index] = TRUEindex;
         nzCoeffMatrix[index] = var;
-        //nnz++;
         return 1; 
     }
     else if (dim == "ajp") {
-        int index = (j * SPLIT.y) + i + (3 * (SPLIT.y * SPLIT.x));
+        int index = (j * (int)SPLIT.y) + i + (3 * ((int)SPLIT.y * (int)SPLIT.x));
         SparseIndexesI[index] = TRUEindex;
-        SparseIndexesJ[index] = TRUEindex - SPLIT.x;
+        SparseIndexesJ[index] = TRUEindex - (int)SPLIT.x;
         nzCoeffMatrix[index] = var;
-        //nnz++;
         return 1; 
     }
     else if (dim == "ajs") { 
-        int index = (j * SPLIT.y) + i + (4 * (SPLIT.y * SPLIT.x));
+        int index = (j * (int)SPLIT.y) + i + (4 * ((int)SPLIT.y * (int)SPLIT.x));
         SparseIndexesI[index] = TRUEindex;
-        SparseIndexesJ[index] = TRUEindex + SPLIT.y;
+        SparseIndexesJ[index] = TRUEindex + (int)SPLIT.y;
         nzCoeffMatrix[index] = var;
-        //nnz++;
         return 1; 
     }
     else { return -1; }
 }
 
 __host__ void Container::BuildSparseMatrixForSolution() {
-    nnz = 5 * GetSPLITS().x * GetSPLITS().y;
-    //for (int i = 0; i < nnz; i++) {
-    //    std::cout << "I = " << SparseIndexesI[i] << " , J = " << SparseIndexesJ[i] << " , Value = " << nzCoeffMatrix[i] << std::endl;
-    //}
-    for (int i = 0; i < nnz; i++) { 
-        if (nzCoeffMatrix[i] == 0) {
-            for (int j = i; j < nnz; j++) {
-                SparseIndexesI[j] = SparseIndexesI[j + 1];
-                SparseIndexesJ[j] = SparseIndexesJ[j + 1];
-                nzCoeffMatrix[j] = nzCoeffMatrix[j + 1];
-            }
-            nnz--;
-            i--;
+    auto LoopStart = std::chrono::high_resolution_clock::now();
+    nnz = 5 * (int)GetSPLITS().x * (int)GetSPLITS().y;
+    HostPrefixSum[0] = 0;
+    for (int i = 1; i < nnz; i++) {
+        if (nzCoeffMatrix[i]) { HostPrefixSum[i] = 1; }
+        if (!nzCoeffMatrix[i]) { HostPrefixSum[i] = 0; }
+    }
+    for (int i = 1; i < nnz; i++) {
+        HostPrefixSum[i] = HostPrefixSum[i - 1] + HostPrefixSum[i];
+    }
+    for (int i = 0; i < nnz; i++) {
+        if(nzCoeffMatrix[i]) { 
+            nzCoeffMatrix[HostPrefixSum[i]] = nzCoeffMatrix[i];
+            SparseIndexesI[HostPrefixSum[i]] = SparseIndexesI[i];
+            SparseIndexesJ[HostPrefixSum[i]] = SparseIndexesJ[i];
         }
     }
+    auto LoopEnd = std::chrono::high_resolution_clock::now();
+    if (debug) {
+        std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
+        std::cout << "BuildSparseMatrixForSolution Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+        if (debug) { std::cout << "=====================" << std::endl; }
+    }
+    //for (int i = 0; i < nnz; i++) {
+    //    std::cout << "I = " << SparseIndexesI[i] << " , J = " << SparseIndexesJ[i] << " , Value = " << nzCoeffMatrix[i] << " , PrefixSum = " << HostPrefixSum[i] << std::endl;
+    //}
 }
 
 __host__ void Container::FindSparseLinearSolution() {
+    auto LoopStart = std::chrono::high_resolution_clock::now();
     umfpack_di_defaults(Control);
-    Control[UMFPACK_PRL] = 6;
-    //umfpack_di_report_triplet(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, Control);
-    umfpack_di_triplet_to_col(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, RowPointer, ColumnIndex, nzCoeffMatrix, NULL);
-    //umfpack_di_report_matrix(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, 0, Control);
-    //umfpack_di_report_vector(SPLIT.x * SPLIT.x, RHSVector, Control);
-    umfpack_di_symbolic(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, &Symbolic, null, null);
-    //umfpack_di_report_symbolic(Symbolic, Control);
+    Control[UMFPACK_PRL] = 3;
+    nnz = (5 * (int)GetSPLITS().x * (int)GetSPLITS().y) - (4 * (int)GetSPLITS().y);
+    if (debug) { umfpack_di_report_triplet(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, Control); }
+    umfpack_di_triplet_to_col((int)SPLIT.x * (int)SPLIT.x, (int)SPLIT.y * (int)SPLIT.y, nnz, SparseIndexesJ, SparseIndexesI, nzCoeffMatrix, RowPointer, ColumnIndex, nzCoeffMatrix, NULL);
+    if (debug) { 
+        umfpack_di_report_matrix(SPLIT.x * SPLIT.x, SPLIT.y * SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, 0, Control);
+        umfpack_di_report_vector(SPLIT.x * SPLIT.x, RHSVector, Control);
+    }
+    umfpack_di_symbolic((int)SPLIT.x * (int)SPLIT.x, (int)SPLIT.y * (int)SPLIT.y, RowPointer, ColumnIndex, nzCoeffMatrix, &Symbolic, null, null);
+    if (debug) { umfpack_di_report_symbolic(Symbolic, Control); }
     umfpack_di_numeric(RowPointer, ColumnIndex, nzCoeffMatrix, Symbolic, &Numeric, null, null);
-    //umfpack_di_report_numeric(Numeric, Control);
+    if (debug) { umfpack_di_report_numeric(Numeric, Control); }
     umfpack_di_solve(UMFPACK_A, RowPointer, ColumnIndex, nzCoeffMatrix, PSolution, RHSVector, Numeric, null, null);
-    //double Info[UMFPACK_INFO];
-    //umfpack_di_report_info(Control, Info);
-    //umfpack_di_free_symbolic(&Symbolic);
-    //umfpack_di_free_numeric(&Numeric);
-    //double Info[UMFPACK_INFO];
+    umfpack_di_free_symbolic(&Symbolic);
+    umfpack_di_free_numeric(&Numeric);
+    auto LoopEnd = std::chrono::high_resolution_clock::now();
+    if (debug) {
+        std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
+        std::cout << "FindSparseLinearSolution Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+    }
 }
 
 __host__ void Container::UpdatePressureValues() {
@@ -291,6 +303,8 @@ __host__ int* Container::GetColumnIndexVector() { return ColumnIndex; }
 __host__ double* Container::GetRHSVector() { return RHSVector; }
 
 __host__ double* Container::GetnzCoeffMat() { return nzCoeffMatrix; }
+
+__host__ double* Container::GetPSolution() { return PSolution; }
 
 __host__ bool Container::CheckConvergedExit() {
     if (std::abs(GetKineticEnergy().x - GetKineticEnergy().y) < GetTOLERANCE()) { return true; }

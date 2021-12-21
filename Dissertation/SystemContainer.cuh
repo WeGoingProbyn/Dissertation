@@ -14,7 +14,6 @@
 #include <cuda.h>
 #include <limits.h>
 #include <cuda_runtime.h>
-#include <cusolverDn.h>
 #include <device_launch_parameters.h>
 
 #include "VectorStruct.h"
@@ -75,6 +74,7 @@ public:
 	__host__ int* GetColumnIndexVector();
 	__host__ double* GetRHSVector();
 	__host__ double* GetnzCoeffMat();
+	__host__ double* GetPSolution();
 
 	__host__ vec3 GetMatrixValue(int i, int j);
 	__host__ vec2 GetInterimValue(int i, int j);
@@ -97,12 +97,13 @@ public:
 	__host__ void CatchSolution();
 
 protected:
-	bool debug = false;
+	bool debug = true;
 	unsigned int SYSTEMSIZE;
 	//dim3 DEVICESIZE = dim3(64, 64);
 	//dim3 DEVICESPLIT = dim3(32, 32);
 	const static unsigned int MAXSPLITS = 4096;
 	const static unsigned int MAXSIZE = MAXSPLITS * MAXSPLITS;
+	const static unsigned int NUMNONZEROS = (5 * MAXSIZE);
 
 	const static unsigned int VARALLOCSIZE = 10 * sizeof(double);
 	const static unsigned int VEC3ALLOCSIZE = MAXSIZE * sizeof(vec3);
@@ -110,7 +111,6 @@ protected:
 	const static unsigned int DOUBLEALLOCSIZE = MAXSIZE * sizeof(double);
 	const static unsigned int DOUBLESPARSEALLOCSIZE = 5 * MAXSIZE * sizeof(double);
 	const static unsigned int INTALLOCSIZE = MAXSIZE * sizeof(int);
-	const static unsigned int NUMNONZEROS = (5 * MAXSIZE);
 
 	int nnz;
 
@@ -136,6 +136,7 @@ private:
 	double* RHSVector;
 	double* nzCoeffMatrix;     
 
+	int* HostPrefixSum;
 	int* SparseIndexesI;
 	int* SparseIndexesJ;
 	int* RowPointer;

@@ -1,11 +1,3 @@
-//#ifdef _DEBUG
-//#undef _DEBUG
-//#include <python.h>
-//#define _DEBUG
-//#else
-//#include <python.h>
-//#endif
-
 #include "Incompressible.h"
 
 void Incompressible::InterimMomentumStep() {
@@ -17,9 +9,7 @@ void Incompressible::InterimMomentumStep() {
     for (int i = 0; i < GetSPLITS().y; i++) {
         for (int j = 1; j < GetSPLITS().x; j++) {
             ComputeMomentum(i, j, "y");
-            //std::cout << GetInterimValue(j, i).y << " , ";
         }
-        //std::cout << std::endl;
     }
     return;
 }
@@ -28,9 +18,7 @@ void Incompressible::TrueMomentumStep() {
     for (int i = 1; i < GetSPLITS().x; i++) {
         for (int j = 0; j < GetSPLITS().y; j++) {
             ComputeIteration(i, j, "x");
-            //std::cout << GetMatrixValue(j, i).u << " , ";
         }
-        //std::cout << std::endl;
     }
     for (int i = 0; i < GetSPLITS().y; i++) {
         for (int j = 1; j < GetSPLITS().x; j++) {
@@ -48,7 +36,6 @@ void Incompressible::SystemDriver() {
     AllocateColumnIndexMemoryToCPU();
     AllocateCompressedRowMemoryToCPU();
     AllocateLinearSolutionMemoryToCPU();
-    //Py_Initialize();
 
     std::chrono::duration<double> LOOPTIME, EXECUTETIME, ETA;
     auto init = std::chrono::high_resolution_clock::now();
@@ -58,7 +45,7 @@ void Incompressible::SystemDriver() {
         if (GetCURRENTSTEP() > 0) {
             if (CheckConvergedExit()) { break; }
             else if (CheckDivergedExit()) { break; }
-            else { std::cout << "\033[A\33[2K\r"; }
+            else if (!debug) { std::cout << "\033[A\33[2K\r"; }
         }
         else { SetKineticEnergy(); }
 
@@ -68,47 +55,67 @@ void Incompressible::SystemDriver() {
         ETA -= MINUTES;
         MINUTES -= HOURS;
 
-        std::cout << GetCURRENTSTEP() << " / " << GetSIMSTEPS() - 1 << " | Estimated time remaining: ";
-        std::cout << HOURS.count() << " Hours ";
-        std::cout << MINUTES.count() << " Minutes ";
-        std::cout << ETA.count() << " Seconds |" << std::endl;
+        if (!debug) {
+            std::cout << GetCURRENTSTEP() << " / " << GetSIMSTEPS() - 1 << " | Estimated time remaining: ";
+            std::cout << HOURS.count() << " Hours ";
+            std::cout << MINUTES.count() << " Minutes ";
+            std::cout << ETA.count() << " Seconds |" << std::endl;
+        }
 
+        if (debug) { std::cout << "=====================" << std::endl; }
+        auto InterimStart = std::chrono::high_resolution_clock::now();
         InterimMomentumStep();
+        auto InterimEnd = std::chrono::high_resolution_clock::now();
+        if (debug) {
+            std::chrono::duration<double> LOOPTIME = InterimEnd - InterimStart;
+            std::cout << "InterimMomentumStep Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+            std::cout << "=====================" << std::endl;
+        }
 
+
+        auto LinearStart = std::chrono::high_resolution_clock::now();
         BuildLinearSystem();
-        //ThrowCoefficients();
-        //ThrowSystemVariables();
+        auto LinearEnd = std::chrono::high_resolution_clock::now();
+        if (debug) {
+            std::chrono::duration<double> LOOPTIME = LinearEnd - LinearStart;
+            std::cout << "BuildLinearSystem Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+            std::cout << "=====================" << std::endl;
+        }
 
         BuildSparseMatrixForSolution();
-        //if (GetCURRENTSTEP() == 0) { break; }
+
         FindSparseLinearSolution();
+        if (debug) { std::cout << "=====================" << std::endl; }
+
+        auto PreStart = std::chrono::high_resolution_clock::now();
         UpdatePressureValues();
+        auto PreEnd = std::chrono::high_resolution_clock::now();
+        if (debug) {
+            std::chrono::duration<double> LOOPTIME = PreEnd - PreStart;
+            std::cout << "UpdatePressureValues Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+            std::cout << "=====================" << std::endl;
+        }
 
-        //ThrowSystemVariables();
         
-        //FILE* fd = _Py_fopen("../x64/Debug/SparseSolver.py", "rb");
-        //PyRun_SimpleFileEx(fd, "SparseSolver.py", 1);
 
-        //CatchSolution();
+        auto TrueStart = std::chrono::high_resolution_clock::now();
         TrueMomentumStep();
-        //ThrowSystemVariables();
+        auto TrueEnd = std::chrono::high_resolution_clock::now();
+        if (debug) {
+            std::chrono::duration<double> LOOPTIME = TrueEnd - TrueStart;
+            std::cout << "TrueMomentumStep Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
+            std::cout << "=====================" << std::endl;
+        }
 
-        //for (int i = 0; i < 4; i++) {
-        //    for (int j = 0; j < 4; j++) {
-        //        int index = (j * GetSPLITS().y) + i;
-        //        std::cout << GetMatrixValue(i, j).u << " , ";
-        //    }
-        //    std::cout << std::endl;
-        //}
-        //if (GetCURRENTSTEP() == 0) { break; }
+        if (debug) { break; }
 
-        if (GetCURRENTSTEP() % 25 == 0) {
+        if (GetCURRENTSTEP() % 50 == 0) {
             auto loopEnd = std::chrono::high_resolution_clock::now();
             LOOPTIME = loopEnd - loopTimer;
-        } 
-        if (GetCURRENTSTEP() % 100 == 0) {
-            ThrowSystemVariables();
         }
+        //if (GetCURRENTSTEP() % 100 == 0) {
+        //    ThrowSystemVariables();
+        //}
 
     }
     if (!CheckConvergedExit()) { LoopBreakOutput(); }
@@ -121,7 +128,6 @@ void Incompressible::SystemDriver() {
     std::cout << "Loop Execution Time: " << EXECUTETIME.count() << " Seconds" << std::endl;
 
     ThrowSystemVariables();
-    //Py_Finalize();
 
     DeAllocateSystemMatrixMemoryOnCPU();
     DeAllocateInterimMatrixMemoryOnCPU();

@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\Python\include;C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\CUDA\include;C:\Dev\C++\year3\Dissertation\Dissertation\Dependencies\UMFPACK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dissertation\Dependencies\Python\include;$(SolutionDir)Dissertation\Dependencies\CUDA\include;$(SolutionDir)Dissertation\Dependencies\UMFPACK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>MaxSpeed</Optimization>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -126,8 +126,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)\Dissertation\Dependencies\Python\libs;$(CudaToolKitLibDir);$(SolutionDir)\Dissertation\Dependencies\UMFPACK\lib;$(SolutionDir)\Dissertation\Dependencies\LAPACK</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib;python3.lib;libumfpackd.lib;suitesparseconfigd.lib;libamdd.lib;libcamdd.lib;libccolamdd.lib;libcholmodd.lib;libcolamdd.lib;libbtfd.lib;libcxsparsed.lib;libklud.lib;libldld.lib;libspqrd.lib;SuiteSparse_GPURuntimed.lib;metisd.lib;libblas.lib;liblapack.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dissertation\Dependencies\Python\libs;$(CudaToolKitLibDir);$(SolutionDir)Dissertation\Dependencies\UMFPACK\lib;$(SolutionDir)Dissertation\Dependencies\LAPACK</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;python3.lib;libumfpackd.lib;suitesparseconfigd.lib;libamdd.lib;libcamdd.lib;libccolamdd.lib;libcholmodd.lib;libcolamdd.lib;libbtfd.lib;libcxsparsed.lib;libklud.lib;libldld.lib;libspqrd.lib;metisd.lib;libblas.lib;liblapack.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>

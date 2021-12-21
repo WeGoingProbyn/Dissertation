@@ -19,6 +19,7 @@ class PhysicsCUDA : public Container {
 		__host__ void SetMatrixToGPU();
 		__host__ void SetInterimToGPU();
 		__host__ void SetLinearSystemToGPU();
+		__host__ void SetPSolutionToGPU();
 
 		__host__ void GetMatrixFromGPU();
 		__host__ void GetInterimFromGPU();
@@ -72,8 +73,12 @@ class PhysicsCUDA : public Container {
 		__device__ void BuildInterior(int i, int j, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ);
 		__device__ void BuildLinearSystem(int i, int j, double* DeviceVars, vec3* DeviceMatrix, vec2* DeviceInterim, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ);
 		
-		//using Container::BuildSparseMatrixForSolution;
-		//__device__ void BuildSparseMatrixForSolution(int i, int j, double* DeviceVars, double* DeviceRHSVector, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ);
+		__device__ void FindValidEntries(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* PrefixSum);
+		__device__ void SumValidEntries(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* PrefixSum);
+		__device__ void ShiftDeviceLinearSystem(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ, int* PrefixSum);
+
+		using Container::BuildSparseMatrixForSolution;
+		__device__ void BuildSparseMatrixForSolution(int i, int j, double* DeviceVars, double* DeviceNzCoeffMat, int* DeviceSparseIndexI, int* DeviceSparseIndexJ, int* PrefixSum);
 
 	protected:
 		double* DeviceVars;
@@ -84,9 +89,14 @@ class PhysicsCUDA : public Container {
 
 		double* DeviceRHSVector;
 		double* DeviceNzCoeffMat;
+		double* DevicePSolution;
 		int* DeviceSparseIndexI;
 		int* DeviceSparseIndexJ;
-		int DeviceNNZ;
+
+		double* DeviceReducedCoeffMat;
+		int* DeviceReducedSparseIndexI;
+		int* DeviceReducedSparseIndexJ;
+		int* PrefixSum;
 };
 
 #endif
