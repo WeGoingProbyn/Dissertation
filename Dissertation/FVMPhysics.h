@@ -25,6 +25,7 @@ public:
 	void BuildLinearSystem();
 
 	void ComputeIteration(int i, int j, const char* dim);
+	void CheckBoundaryCell(int i, int j);
 
 	//void ThrowCoefficients();
 };

@@ -101,12 +101,27 @@ __host__ int Container::SetSystemVariables() {
     D.y = Y[1] - Y[0];
 
     RHO = 1.; // Constant rho
-    NU = (D.y * SPLIT.x * RHO) / RE;
+    if (!tunnel) {
+        NU = *std::max_element(std::begin(VBOUND), std::end(VBOUND)) * (D.y * SPLIT.x * RHO) / RE;
+    }
+    else {
+        NU = (D.y * SPLIT.x * RHO) / RE;
+    }
 
     DXDY = { D.x, D.y };
-    BOXSCALE = (SIZE.x + SIZE.y) / 2 / *std::max_element(std::begin(VBOUND), std::end(VBOUND));
+    if (tunnel) {
+        BOXSCALE = (SIZE.x + SIZE.y) / 2 / 1.0; // Highest of Inlet/Outlet Velocity
+    }
+    else {
+        BOXSCALE = (SIZE.x + SIZE.y) / 2 / *std::max_element(std::begin(VBOUND), std::end(VBOUND));
+    }
     TRUETIME = BOXSCALE * MAXTIME;
-    DT = CFL * *std::min_element(std::begin(DXDY), std::end(DXDY)) / *std::max_element(std::begin(VBOUND), std::end(VBOUND));
+    if (tunnel) {
+        DT = CFL * *std::min_element(std::begin(DXDY), std::end(DXDY)) / 1.0; // Highest of Inlet/Outlet Velocity
+    }
+    else {
+        DT = CFL * *std::min_element(std::begin(DXDY), std::end(DXDY)) / *std::max_element(std::begin(VBOUND), std::end(VBOUND));
+    }
     SIMSTEPS = TRUETIME / DT;
     DT = TRUETIME / (int)SIMSTEPS;
 
@@ -123,6 +138,15 @@ __host__ int Container::SetSystemVariables() {
     vars[8] = VelocityBound.N;
     vars[9] = VelocityBound.S;
     return 1;
+}
+
+__host__ void Container::SetFlags(bool _shape, bool _debug, bool _tunnel) {
+    if (_shape) { shape = true; }
+    else { shape = false; }
+    if (_debug) { debug = true; }
+    else { debug = false; }
+    if (_tunnel) { tunnel = true; }
+    else { tunnel = false; }
 }
 
 __host__ int Container::IncreaseSTEP() { STEPNUMBER++; return 1; }
@@ -150,6 +174,22 @@ __host__ double Container::GetTOLERANCE() { return TOLERANCE; }
 __host__  double Container::GetDT() { return DT; }
 
 __host__  double Container::GetNU() { return NU; }
+
+__host__ void Container::SetObjectArguments(vec4 args) {
+    point_a = args.E;
+    point_b = args.W;
+    radius = args.N;
+    circle = args.S;
+}
+
+__host__ double Container::CheckBoundaryCondition(int i, int j, bool circle) {
+    if (circle) {
+        return double((((i - point_a) * (i - point_a)) + ((j - point_b) * (j - point_b))) - radius * radius); 
+    } // Circle
+    else {
+        return double(abs((i - point_a) + (j - point_b)) + abs((i - point_a) - (j - point_b)) - radius);
+    } // Square
+}
 
 __host__ int Container::SetMatrixValue(int i, int j, double var, const char* dim) {
     int index = (j * (int)SPLIT.y) + i;
@@ -206,13 +246,41 @@ __host__ int Container::SetLinearValue(int i, int j, double var, const char* dim
     else { return -1; }
 }
 
+__host__ double Container::GetLinearValue(int i, int j, const char* dim) {
+    if (dim == "b") {
+        int index = (j * (int)SPLIT.y) + i;
+        return RHSVector[index];
+    }
+    if (dim == "a") {
+        int index = (j * (int)SPLIT.y) + i;
+        return nzCoeffMatrix[index];
+    }
+    if (dim == "aip") {
+        int index = (j * (int)SPLIT.y) + i + ((int)SPLIT.y * (int)SPLIT.x);
+        return nzCoeffMatrix[index];
+    }
+    else if (dim == "ais") {
+        int index = (j * (int)SPLIT.y) + i + (2 * ((int)SPLIT.y * (int)SPLIT.x));
+        return nzCoeffMatrix[index];
+    }
+    else if (dim == "ajp") {
+        int index = (j * (int)SPLIT.y) + i + (3 * ((int)SPLIT.y * (int)SPLIT.x));
+        return nzCoeffMatrix[index];
+    }
+    else if (dim == "ajs") {
+        int index = (j * (int)SPLIT.y) + i + (4 * ((int)SPLIT.y * (int)SPLIT.x));
+        return nzCoeffMatrix[index];
+    }    
+}
+
 __host__ void Container::BuildSparseMatrixForSolution() {
     auto LoopStart = std::chrono::high_resolution_clock::now();
     nnz = 5 * (int)GetSPLITS().x * (int)GetSPLITS().y;
+    int nz = 0;
     HostPrefixSum[0] = 0;
     for (int i = 1; i < nnz; i++) {
-        if (nzCoeffMatrix[i]) { HostPrefixSum[i] = 1; }
-        if (!nzCoeffMatrix[i]) { HostPrefixSum[i] = 0; }
+        if (nzCoeffMatrix[i] != 0) { HostPrefixSum[i] = 1; nz++; }
+        if (nzCoeffMatrix[i] == 0) { HostPrefixSum[i] = 0; }
     }
     for (int i = 1; i < nnz; i++) {
         HostPrefixSum[i] = HostPrefixSum[i - 1] + HostPrefixSum[i];
@@ -224,15 +292,18 @@ __host__ void Container::BuildSparseMatrixForSolution() {
             SparseIndexesJ[HostPrefixSum[i]] = SparseIndexesJ[i];
         }
     }
+    if (debug) {
+        if (GetSPLITS().x < 6) {
+            for (int i = 0; i < nz + 1; i++)
+                std::cout << "I = " << SparseIndexesI[i] << " , " << "J = " << SparseIndexesJ[i] << " , " << "Nz = " << nzCoeffMatrix[i] << std::endl;
+        }
+    }
     auto LoopEnd = std::chrono::high_resolution_clock::now();
     if (debug) {
         std::chrono::duration<double> LOOPTIME = LoopEnd - LoopStart;
         std::cout << "BuildSparseMatrixForSolution Execution time -> " << LOOPTIME.count() << " seconds" << std::endl;
         if (debug) { std::cout << "=====================" << std::endl; }
     }
-    //for (int i = 0; i < nnz; i++) {
-    //    std::cout << "I = " << SparseIndexesI[i] << " , J = " << SparseIndexesJ[i] << " , Value = " << nzCoeffMatrix[i] << " , PrefixSum = " << HostPrefixSum[i] << std::endl;
-    //}
 }
 
 __host__ void Container::FindSparseLinearSolution() {
@@ -265,6 +336,16 @@ __host__ void Container::UpdatePressureValues() {
         for (int j = 0; j < SPLIT.y; j++) {
             int index = (j * (int)SPLIT.y) + i;
             SetMatrixValue(i, j, PSolution[index], "p");
+            if (debug) {
+                if (GetSPLITS().x < 16) {
+                    std::cout << GetMatrixValue(i, j).p << " , ";
+                }
+            }
+        }
+        if (debug) {
+            if (GetSPLITS().x < 16) {
+                std::cout << std::endl;
+            }
         }
     }
 }
@@ -353,6 +434,7 @@ __host__ int Container::ThrowSystemVariables() {
     SystemFile << "ITERATION: " << GetCURRENTSTEP() << std::endl;
     SystemFile << "BOX DIMENSIONS , " << SIZE.x << " , " << SIZE.y << std::endl;
     SystemFile << "MATRIX DIMENSIONS , " << SPLIT.x << " , " << SPLIT.y << std::endl;
+    SystemFile << "RE , " << RE << std::endl;
     SystemFile << "| X | Y | U | V | P |" << std::endl;
     for (int j = 0; j < SPLIT.y + 1; j++) {
         for (int i = 0; i < SPLIT.x + 1; i++) {

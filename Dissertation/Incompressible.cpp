@@ -11,6 +11,24 @@ void Incompressible::InterimMomentumStep() {
             ComputeMomentum(i, j, "y");
         }
     }
+    if (debug) {
+        if (GetSPLITS().x < 17) {
+            for (int i = 1; i < GetSPLITS().y; i++) {
+                for (int j = 0; j < GetSPLITS().x; j++) {
+                    std::cout << GetInterimValue(i, j).x << " , ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+            for (int i = 0; i < GetSPLITS().y; i++) {
+                for (int j = 1; j < GetSPLITS().x; j++) {
+                    std::cout << GetInterimValue(i, j).y << " , ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    }
     return;
 }
 
@@ -23,6 +41,11 @@ void Incompressible::TrueMomentumStep() {
     for (int i = 0; i < GetSPLITS().y; i++) {
         for (int j = 1; j < GetSPLITS().x; j++) {
             ComputeIteration(i, j, "y");
+        }
+    }
+    for (int i = 1; i < GetSPLITS().x; i++) {
+        for (int j = 0; j < GetSPLITS().y; j++) {
+            CheckBoundaryCell(i, j);
         }
     }
     SetAverageVelocities();
@@ -48,6 +71,16 @@ void Incompressible::SystemDriver() {
             else if (!debug) { std::cout << "\033[A\33[2K\r"; }
         }
         else { SetKineticEnergy(); }
+
+        if (shape) {
+            if (GetCURRENTSTEP() == 0) {
+                for (int i = 1; i < GetSPLITS().x; i++) {
+                    for (int j = 0; j < GetSPLITS().y; j++) {
+                        CheckBoundaryCell(i, j);
+                    }
+                }
+            }
+        }
 
         ETA = (LOOPTIME * (((double)GetSIMSTEPS() - 1.000) - (double)GetCURRENTSTEP()));
         auto MINUTES = std::chrono::duration_cast<std::chrono::minutes>(ETA);
@@ -107,7 +140,7 @@ void Incompressible::SystemDriver() {
             std::cout << "=====================" << std::endl;
         }
 
-        if (debug) { break; }
+        if (debug && GetCURRENTSTEP() == 0) { break; }
 
         if (GetCURRENTSTEP() % 50 == 0) {
             auto loopEnd = std::chrono::high_resolution_clock::now();

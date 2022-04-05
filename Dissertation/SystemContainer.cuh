@@ -3,12 +3,15 @@
 #ifndef SYSTEMCONTAINER_CUH
 #define SYSTEMCONTAINER_CUH
 
+#include <cstdlib>
+#include <cstdio>
 #include <algorithm>
 #include <chrono>
 #include <numeric>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <cuda.h>
@@ -82,8 +85,12 @@ public:
 	__host__ int SetMatrixValue(int j, int i, double var, const char* dim);
 	__host__ int SetInterimValue(int i, int j, double var, const char* dim);
 	__host__ int SetLinearValue(int i, int j, double var, const char* dim);
+	__host__ double GetLinearValue(int i, int j, const char* dim);
 	//__host__ int SetSparseMatrixInfo(int i, int j, const char* dim);
 	//__host__ void SetBVector(int i, int j);
+
+	__host__ void SetObjectArguments(vec4 args);
+	__host__ double CheckBoundaryCondition(int i, int j, bool circle);
 
 	__host__ void BuildSparseMatrixForSolution();
 	__host__ void FindSparseLinearSolution();
@@ -96,8 +103,13 @@ public:
 	__host__ int ThrowSystemVariables();
 	__host__ void CatchSolution();
 
+	__host__ void SetFlags(bool _shape, bool _debug, bool _tunnel);
+
 protected:
-	bool debug = true;
+	bool circle = false;
+	bool tunnel = false;
+	bool shape = false;
+	bool debug = false;
 	unsigned int SYSTEMSIZE;
 	//dim3 DEVICESIZE = dim3(64, 64);
 	//dim3 DEVICESPLIT = dim3(32, 32);
@@ -124,6 +136,7 @@ private:
 	vec2 SIZE, SPLIT, D;
 	vec4 VelocityBound;
 	int STEPNUMBER;
+	int point_a, point_b, radius;
 	double RE, NU, RHO, DT, CFL, TOLERANCE;
 	double MAXTIME, TRUETIME, BOXSCALE, SIMSTEPS;
 	vec2 AverageVelocities, KineticEnergy;

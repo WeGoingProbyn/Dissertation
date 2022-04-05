@@ -38,21 +38,21 @@
     <ClInclude Include="Incompressible.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IncompressCUDA.cuh">
+    <ClInclude Include="FVMCUDA.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FVMCUDA.cuh">
+    <ClInclude Include="IncompressCUDA.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="SystemContainer.cu">
+    <CudaCompile Include="FVMCUDA.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
     <CudaCompile Include="IncompressCUDA.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
-    <CudaCompile Include="FVMCUDA.cu">
+    <CudaCompile Include="SystemContainer.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
